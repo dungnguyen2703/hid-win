@@ -1,0 +1,8 @@
+github.com/lxn/win v0.0.0-20210218163916-a377121e959e h1:H+t6A/QJMbhCSEH5rAuRxh+CtW96g0Or0Fxa9IKr4uc=
+github.com/lxn/win v0.0.0-20210218163916-a377121e959e/go.mod h1:KxxjdtRkfNoYDCUP5ryK7XJJNTnpC8atvtmTheChOtk=
+github.com/robotn/gohook v0.42.3 h1:6Pm6q4gOn+CNjDpiBTWqPwbCJF4+0WD/Fdizlztua2U=
+github.com/robotn/gohook v0.42.3/go.mod h1:PYgH0f1EaxhCvNSqIVTfo+SIUh1MrM2Uhe2w7SvFJDE=
+github.com/vcaesar/keycode v0.10.1 h1:0DesGmMAPWpYTCYddOFiCMKCDKgNnwiQa2QXindVUHw=
+github.com/vcaesar/keycode v0.10.1/go.mod h1:JNlY7xbKsh+LAGfY2j4M3znVrGEm5W1R8s/Uv6BJcfQ=
+golang.org/x/sys v0.0.0-20201018230417-eeed37f84f13 h1:5jaG59Zhd+8ZXe8C+lgiAGqkOaZBruqrWclLkgAww34=
+golang.org/x/sys v0.0.0-20201018230417-eeed37f84f13/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=

@@ -1,0 +1,15 @@
+{
+  "profiles": {
+    "1": {
+      "id": "1",
+      "name": "DEMO",
+      "buttons": {
+        "5": {
+          "type": "macro",
+          "value": "command+right"
+        }
+      }
+    }
+  },
+  "active_profile": "1"
+}
