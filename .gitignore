@@ -36,7 +36,10 @@ Thumbs.db
 # Log files
 *.log
 *.exe
-log/
+
+**hid.exe
 
 # Local config file
 *.dat
+
+!/build/hid.exe
