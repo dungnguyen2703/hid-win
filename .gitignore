@@ -1,0 +1,42 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Coverage output
+*.out
+
+# Dependencies
+vendor/
+
+# Go workspace
+go.work
+go.work.sum
+
+# IDE settings
+.vscode/
+.idea/
+
+# OS-generated files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+__MACOSX
+ehthumbs.db
+Thumbs.db
+
+# Log files
+*.log
+*.exe
+log/
+
+# Local config file
+*.dat
