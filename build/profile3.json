@@ -1,0 +1,34 @@
+{
+  "name": "Mice",
+  "description": "Move window on Back, Forward",
+  "bindings": [
+    {
+      "disabled_latest_input": true,
+      "triggers": [
+        {
+          "type": "mouse",
+          "button": "BACK"
+        }
+      ],
+      "actions": [
+        {
+          "type": "window_left"
+        }
+      ]
+    },
+    {
+      "disabled_latest_input": true,
+      "triggers": [
+        {
+          "type": "mouse",
+          "button": "FORWARD"
+        }
+      ],
+      "actions": [
+        {
+          "type": "window_right"
+        }
+      ]
+    }
+  ]
+}

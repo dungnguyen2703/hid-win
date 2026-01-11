@@ -22,3 +22,12 @@ const (
 	BACK_BUTTON    BUTTON = "BACK"
 	FORWARD_BUTTON BUTTON = "FORWARD"
 )
+
+func IsValidButton(b string) bool {
+	switch BUTTON(b) {
+	case LEFT_BUTTON, RIGHT_BUTTON, MIDDLE_BUTTON, V_WHEEL, H_WHEEL, BACK_BUTTON, FORWARD_BUTTON:
+		return true
+	default:
+		return false
+	}
+}

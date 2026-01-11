@@ -1,0 +1,62 @@
+{
+  "name": "Keyboard and Mice",
+  "description": "Move window on F1, F2, Back, Forward",
+  "bindings": [
+    {
+      "disabled_latest_input": true,
+      "triggers": [
+        {
+          "type": "key",
+          "key": "F1"
+        }
+      ],
+      "actions": [
+        {
+          "type": "window_left"
+        }
+      ]
+    },
+    {
+      "disabled_latest_input": true,
+      "triggers": [
+        {
+          "type": "key",
+          "key": "F2"
+        }
+      ],
+      "actions": [
+        {
+          "type": "window_right"
+        }
+      ]
+    },
+    {
+      "disabled_latest_input": true,
+      "triggers": [
+        {
+          "type": "mouse",
+          "button": "BACK"
+        }
+      ],
+      "actions": [
+        {
+          "type": "window_left"
+        }
+      ]
+    },
+    {
+      "disabled_latest_input": true,
+      "triggers": [
+        {
+          "type": "mouse",
+          "button": "FORWARD"
+        }
+      ],
+      "actions": [
+        {
+          "type": "window_right"
+        }
+      ]
+    }
+  ]
+}

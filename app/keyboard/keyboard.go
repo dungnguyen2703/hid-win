@@ -79,5 +79,13 @@ func Reset() {
 }
 
 func IsKeyPressed(vKey KEY) bool {
+	switch vKey {
+	case SHIFT:
+		return keyStates[SHIFT] || keyStates[LEFT_SHIFT] || keyStates[RIGHT_SHIFT]
+	case CTRL:
+		return keyStates[CTRL] || keyStates[LEFT_CTRL] || keyStates[RIGHT_CTRL]
+	case ALT:
+		return keyStates[ALT] || keyStates[LEFT_ALT] || keyStates[RIGHT_ALT]
+	}
 	return keyStates[vKey]
 }

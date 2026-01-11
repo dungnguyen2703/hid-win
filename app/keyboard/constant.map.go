@@ -41,3 +41,12 @@ var keyMap = map[KEY]string{
 	// Additional Keys
 	CONTEXT_MENU: "CONTEXT_MENU", SLEEP: "SLEEP", SELECT: "SELECT", EXECUTE: "EXECUTE", HELP: "HELP",
 }
+
+func GetKeyFromName(name string) (KEY, bool) {
+	for k, v := range keyMap {
+		if v == name {
+			return k, true
+		}
+	}
+	return 0, false
+}

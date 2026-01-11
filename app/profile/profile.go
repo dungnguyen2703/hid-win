@@ -1,7 +1,8 @@
 package profile
 
 import (
-	"hidtool/app/event"
+	"encoding/json"
+	"fmt"
 	"hidtool/app/keyboard"
 	"hidtool/app/mice"
 )
@@ -11,63 +12,6 @@ type Profile interface {
 	GetName() string
 	GetDescription() string
 	GetBinding(key keyboard.KEY, button mice.BUTTON) Binding
-}
-
-type Trigger interface {
-	isTrigger(keyboard.KEY, mice.BUTTON) bool
-}
-
-type MiceTrigger struct {
-	Button mice.BUTTON `json:"button"`
-}
-
-func (m MiceTrigger) isTrigger(key keyboard.KEY, btn mice.BUTTON) bool {
-	isTrigged := mice.IsButtonClicked(m.Button)
-	return m.Button == btn || isTrigged
-}
-
-type KeyTrigger struct {
-	Key keyboard.KEY `json:"key"`
-}
-
-func (k KeyTrigger) isTrigger(key keyboard.KEY, btn mice.BUTTON) bool {
-	isTrigged := keyboard.IsKeyPressed(k.Key)
-	return k.Key == key || isTrigged
-}
-
-type Binding interface {
-	Action()
-	DisableLatestInput() bool
-	isTrigger(keyboard.KEY, mice.BUTTON) bool
-}
-
-// Binding represents a mapping rule
-type BindingImpl struct {
-	Triggers             []Trigger      `json:"triggers"`                        // Conditions to activate the binding
-	Actions              []event.Action `json:"actions"`                         // List of steps to execute
-	DisabledLastestInput bool           `json:"disabled_latest_input,omitempty"` // Whether to disable the latest input event after action
-}
-
-func (b BindingImpl) Action() {
-	for _, action := range b.Actions {
-		action.Run()
-	}
-}
-
-func (b BindingImpl) DisableLatestInput() bool {
-	return b.DisabledLastestInput
-}
-
-func (b BindingImpl) isTrigger(key keyboard.KEY, button mice.BUTTON) bool {
-	if len(b.Triggers) == 0 {
-		return false
-	}
-	for _, trigger := range b.Triggers {
-		if !trigger.isTrigger(key, button) {
-			return false
-		}
-	}
-	return true
 }
 
 // Profile contains a collection of Bindings
@@ -100,6 +44,40 @@ func (m *ProfileImpl) GetBinding(key keyboard.KEY, button mice.BUTTON) Binding {
 		if binding.isTrigger(key, button) {
 			return binding
 		}
+	}
+	return nil
+}
+
+func (p *ProfileImpl) UnmarshalJSON(data []byte) error {
+	type Alias ProfileImpl
+	aux := &struct {
+		Bindings []json.RawMessage `json:"bindings"`
+		*Alias
+	}{
+		Alias: (*Alias)(p),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	for _, raw := range aux.Bindings {
+		var meta struct {
+			Type string `json:"type"`
+		}
+		_ = json.Unmarshal(raw, &meta)
+
+		var b Binding
+		switch meta.Type {
+		case "", "mapping":
+			var bm BindingMapping
+			if err := json.Unmarshal(raw, &bm); err != nil {
+				return err
+			}
+			b = &bm
+		default:
+			return fmt.Errorf("unknown binding type: %s", meta.Type)
+		}
+		p.Bindings = append(p.Bindings, b)
 	}
 	return nil
 }

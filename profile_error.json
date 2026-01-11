@@ -1,0 +1,34 @@
+{
+  "name": "Error Profile",
+  "description": "This profile is used when loading a profile fails",
+  "bindings": [
+    {
+      "disabled_latest_input": true,
+      "triggers": [
+        {
+          "type": "key",
+          "key": "F1"
+        }
+      ],
+      "actions": [
+        {
+          "type": "error"
+        }
+      ]
+    },
+    {
+      "disabled_latest_input": true,
+      "triggers": [
+        {
+          "type": "mouse",
+          "button": "FORWARD"
+        }
+      ],
+      "actions": [
+        {
+          "type": "window_right"
+        }
+      ]
+    }
+  ]
+}
