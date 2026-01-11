@@ -18,6 +18,10 @@ cd $env:localappdata
 del IconCache.db -a
 start explorer.exe
 
+# Test
+
+go test -v ./...
+
 # Build
 
 go build -o ../build/hid.exe -tags=release

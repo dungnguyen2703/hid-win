@@ -1,75 +1,105 @@
 package profile
 
-import "hidtool/app/beep"
-
-type Profile int
-
-const (
-	Off      Profile = 0
-	All      Profile = 1
-	Keyboard Profile = 2
-	Mice     Profile = 3
+import (
+	"hidtool/app/event"
+	"hidtool/app/keyboard"
+	"hidtool/app/mice"
 )
 
-var currentProfile Profile = All
+type Profile interface {
+	GetID() string
+	GetName() string
+	GetDescription() string
+	GetBinding(key keyboard.KEY, button mice.BUTTON) Binding
+}
 
-func nextProfile(current Profile) Profile {
-	switch current {
-	case Off:
-		return All
-	case All:
-		return Keyboard
-	case Keyboard:
-		return Mice
-	case Mice:
-		return Off
+type Trigger interface {
+	isTrigger(keyboard.KEY, mice.BUTTON) bool
+}
+
+type MiceTrigger struct {
+	Button mice.BUTTON `json:"button"`
+}
+
+func (m MiceTrigger) isTrigger(key keyboard.KEY, btn mice.BUTTON) bool {
+	isTrigged := mice.IsButtonClicked(m.Button)
+	return m.Button == btn || isTrigged
+}
+
+type KeyTrigger struct {
+	Key keyboard.KEY `json:"key"`
+}
+
+func (k KeyTrigger) isTrigger(key keyboard.KEY, btn mice.BUTTON) bool {
+	isTrigged := keyboard.IsKeyPressed(k.Key)
+	return k.Key == key || isTrigged
+}
+
+type Binding interface {
+	Action()
+	DisableLatestInput() bool
+	isTrigger(keyboard.KEY, mice.BUTTON) bool
+}
+
+// Binding represents a mapping rule
+type BindingImpl struct {
+	Triggers             []Trigger      `json:"triggers"`                        // Conditions to activate the binding
+	Actions              []event.Action `json:"actions"`                         // List of steps to execute
+	DisabledLastestInput bool           `json:"disabled_latest_input,omitempty"` // Whether to disable the latest input event after action
+}
+
+func (b BindingImpl) Action() {
+	for _, action := range b.Actions {
+		action.Run()
 	}
-	return Off
 }
 
-func prevProfile(current Profile) Profile {
-	switch current {
-	case Off:
-		return Mice
-	case All:
-		return Off
-	case Keyboard:
-		return All
-	case Mice:
-		return Keyboard
+func (b BindingImpl) DisableLatestInput() bool {
+	return b.DisabledLastestInput
+}
+
+func (b BindingImpl) isTrigger(key keyboard.KEY, button mice.BUTTON) bool {
+	if len(b.Triggers) == 0 {
+		return false
 	}
-	return Off
-}
-
-func PlayProfileSound() {
-	switch currentProfile {
-	case Off:
-		beep.Play(beep.LOW_BEEP, 1000)
-	case All:
-		beep.Play(beep.MEDIUM_BEEP, 500)
-		beep.Play(beep.HIGH_BEEP, 500)
-	case Keyboard:
-		beep.Play(beep.MEDIUM_BEEP, 500)
-	case Mice:
-		beep.Play(beep.HIGH_BEEP, 500)
+	for _, trigger := range b.Triggers {
+		if !trigger.isTrigger(key, button) {
+			return false
+		}
 	}
+	return true
 }
 
-func SetProfile(profile Profile) {
-	currentProfile = profile
-	// PlayProfileSound()
+// Profile contains a collection of Bindings
+type ProfileImpl struct {
+	ID          string    `json:"id,omitempty"`
+	Name        string    `json:"name"`
+	Description string    `json:"description,omitempty"`
+	Bindings    []Binding `json:"bindings"`
 }
 
-func NextProfile() {
-	currentProfile = nextProfile(currentProfile)
-	// PlayProfileSound()
+func (m *ProfileImpl) GetID() string {
+	return m.ID
 }
 
-func PrevProfile() {
-	currentProfile = prevProfile(currentProfile)
-	// PlayProfileSound()
+func (m *ProfileImpl) GetName() string {
+	return m.Name
 }
 
-func GetProfile() Profile {
-	return currentProfile
+func (m *ProfileImpl) GetDescription() string {
+	return m.Description
+}
+
+// Action checks and performs actions based on the input key and button
+// Returns isPerformed, isDisabledLatestAction
+func (m *ProfileImpl) GetBinding(key keyboard.KEY, button mice.BUTTON) Binding {
+	if key == 0 && button == "" {
+		return nil
+	}
+	for _, binding := range m.Bindings {
+		if binding.isTrigger(key, button) {
+			return binding
+		}
+	}
+	return nil
 }

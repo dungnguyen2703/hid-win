@@ -1,12 +1,13 @@
 package app
 
 import (
-	"hidtool/app/event"
 	"hidtool/app/keyboard"
+	"hidtool/app/logger"
 	"hidtool/app/mice"
 	"hidtool/app/profile"
 	"os"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/getlantern/systray"
@@ -18,6 +19,8 @@ var (
 	setWindowsHookEx = user32.NewProc("SetWindowsHookExW")
 	callNextHookEx   = user32.NewProc("CallNextHookEx")
 	getMessage       = user32.NewProc("GetMessageW")
+	openInputDesktop = user32.NewProc("OpenInputDesktop")
+	closeDesktop     = user32.NewProc("CloseDesktop")
 )
 
 const (
@@ -25,26 +28,21 @@ const (
 	WH_MOUSE_LL    = 14
 )
 
-func debugLog(v ...any) {
-	// log.Println(v...)
-}
-
-func run() {
+func Run() {
 	hook, _, _ := setWindowsHookEx.Call(
 		WH_MOUSE_LL,
 		syscall.NewCallback(func(nCode int, wParam uintptr, lParam uintptr) uintptr {
-			currentProfile := profile.GetProfile()
-			if currentProfile == profile.All || currentProfile == profile.Mice {
-				key, ok := mice.Check(nCode, wParam, lParam)
-				if ok {
-					debugLog("🐭 Mouse Event:", key)
-					switch key {
-					case mice.BACK_BUTTON_DOWN:
-						event.Run(event.WindowLeft)
-						return 1
-					case mice.FORWARD_BUTTON_DOWN:
-						event.Run(event.WindowRight)
-						return 1
+			currentProfile := profile.GetCurrentProfile()
+			if currentProfile != nil {
+				key, eventType, ok, isInjected := mice.Check(nCode, wParam, lParam)
+				if ok && eventType == mice.CLICK_DOWN && !isInjected {
+					logger.Debug("🐭 Mouse Event:", key)
+					binding := currentProfile.GetBinding(0, key)
+					if binding != nil {
+						binding.Action()
+						if binding.DisableLatestInput() {
+							return 1
+						}
 					}
 				}
 			}
@@ -57,18 +55,22 @@ func run() {
 	kbHook, _, _ := setWindowsHookEx.Call(
 		WH_KEYBOARD_LL,
 		syscall.NewCallback(func(nCode int, wParam uintptr, lParam uintptr) uintptr {
-			key, modifiers, ok := keyboard.Check(nCode, wParam, lParam)
-			if ok {
-				debugLog("⌨️ Keyboard Event:", key, modifiers)
-				if len(modifiers) == 0 {
-					currentProfile := profile.GetProfile()
-					if currentProfile == profile.All || currentProfile == profile.Keyboard {
-						switch key {
-						case keyboard.F1:
-							event.Run(event.WindowLeft)
-							return 1
-						case keyboard.F2:
-							event.Run(event.WindowRight)
+			currentProfile := profile.GetCurrentProfile()
+			if currentProfile != nil {
+				key, eventType, isFirst, isExtended, _, ok := keyboard.Check(nCode, wParam, lParam)
+				if ok && eventType == keyboard.TAP_DOWN {
+					if isExtended {
+						logger.Debug("⌨️ Extended Keyboard Event:", key)
+					} else {
+						logger.Debug("⌨️ Keyboard Event:", key)
+					}
+
+					binding := currentProfile.GetBinding(key, "")
+					if binding != nil {
+						if isFirst {
+							binding.Action()
+						}
+						if binding.DisableLatestInput() {
 							return 1
 						}
 					}
@@ -80,6 +82,26 @@ func run() {
 		0,
 		0,
 	)
+
+	go func() {
+		wasLocked := false
+
+		for {
+			time.Sleep(2 * time.Second)
+			hDesk, _, _ := openInputDesktop.Call(0, 0, 0x100)
+			isLocked := (hDesk == 0)
+			if hDesk != 0 {
+				closeDesktop.Call(hDesk)
+			}
+			if isLocked {
+				wasLocked = true
+			} else if wasLocked {
+				keyboard.Reset()
+				mice.Reset()
+				wasLocked = false
+			}
+		}
+	}()
 
 	// Loop to keep the hook alive
 	var msg struct {
@@ -101,12 +123,8 @@ func run() {
 	_ = kbHook
 }
 
-func RunAtStartup() error {
-	execPath, err := os.Executable()
-	if err != nil {
-		return err
-	}
-
+func RunOnStartup() error {
+	execPath, _ := os.Executable()
 	key, _, err := registry.CreateKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Run`, registry.SET_VALUE)
 	if err != nil {
 		return err
@@ -116,63 +134,50 @@ func RunAtStartup() error {
 	return key.SetStringValue("HIDTool", execPath)
 }
 
-func RunInSysTray(iconData []byte) {
-	// Init Systray
+func SetupSysTray(iconData []byte) {
 	systray.SetIcon(iconData)
 	systray.SetTitle("HID Tool")
 	systray.SetTooltip("HID Tool - Mouse and Keyboard Enhancer")
-
-	// Initiaize Menu
-	mOff := systray.AddMenuItem("Off", "Disable all hooks")
-	mAll := systray.AddMenuItem("Mice + Keyboard", "Enable both")
-	mKey := systray.AddMenuItem("Keyboard Only", "Enable keyboard only")
-	mMice := systray.AddMenuItem("Mice Only", "Enable mice only")
+	menuMap := map[profile.Profile]*systray.MenuItem{}
+	for _, profile := range profile.List {
+		menu := systray.AddMenuItem(profile.GetName(), profile.GetDescription())
+		menuMap[profile] = menu
+	}
 	systray.AddSeparator()
 	mQuit := systray.AddMenuItem("Quit", "Quit the application")
 
-	menuMap := map[profile.Profile]*systray.MenuItem{
-		profile.Off:      mOff,
-		profile.All:      mAll,
-		profile.Keyboard: mKey,
-		profile.Mice:     mMice,
-	}
-
 	updateCheckmarks := func() {
-		current := profile.GetProfile()
-		for name, item := range menuMap {
-			if name == current {
-				item.Check()
+		current := profile.GetCurrentProfile()
+		for pf, mItem := range menuMap {
+			if current != nil && pf.GetID() == current.GetID() {
+				mItem.Check()
 			} else {
-				item.Uncheck()
+				mItem.Uncheck()
 			}
 		}
 	}
 
 	updateCheckmarks()
 
-	// Run main app logic
-	go run()
-
-	// Loop to handle menu item clicks
 	go func() {
-		for {
-			select {
-			case <-mOff.ClickedCh:
-				profile.SetProfile(profile.Off)
-				updateCheckmarks()
-			case <-mAll.ClickedCh:
-				profile.SetProfile(profile.All)
-				updateCheckmarks()
-			case <-mKey.ClickedCh:
-				profile.SetProfile(profile.Keyboard)
-				updateCheckmarks()
-			case <-mMice.ClickedCh:
-				profile.SetProfile(profile.Mice)
-				updateCheckmarks()
-			case <-mQuit.ClickedCh:
-				systray.Quit()
-			}
+		for range mQuit.ClickedCh {
+			systray.Quit()
+			return
 		}
 	}()
+
+	for pf, mItem := range menuMap {
+		go func(p profile.Profile, item *systray.MenuItem) {
+			for range item.ClickedCh {
+				current := profile.GetCurrentProfile()
+				if (current == nil) || (current.GetID() != p.GetID()) {
+					profile.SetCurrentProfile(p)
+				} else {
+					profile.SetCurrentProfile(nil)
+				}
+				updateCheckmarks()
+			}
+		}(pf, mItem)
+	}
 
 }

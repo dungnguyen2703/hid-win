@@ -3,6 +3,7 @@ package main
 import (
 	_ "embed"
 	"hidtool/app"
+	"hidtool/app/util"
 
 	"github.com/getlantern/systray"
 )
@@ -11,15 +12,19 @@ import (
 var iconData []byte
 
 func main() {
-	// Systray.Run
+	err := util.InitializeDebugBuild()
+	if err != nil {
+		panic(err)
+	}
+	go app.Run()
+	if !util.IsDebugBuild() {
+		app.RunOnStartup()
+	}
 	systray.Run(onReady, onExit)
 }
 
 func onReady() {
-	// Init Systray
-	app.RunInSysTray(iconData)
-	app.RunAtStartup()
-
+	app.SetupSysTray(iconData)
 }
 
 func onExit() {
