@@ -100,7 +100,22 @@ Simulates a key press (down and up).
 }
 ```
 
-#### 3. Delay
+#### 3. Tap Down / Tap Up
+
+Simulates a key down or key up event.
+
+```json
+{
+  "type": "tap_down",
+  "key": "A"
+}
+{
+  "type": "tap_up",
+  "key": "A"
+}
+```
+
+#### 4. Delay
 
 Waits for a specified duration before extracting the next action.
 
