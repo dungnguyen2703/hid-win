@@ -5,13 +5,9 @@ import (
 	"hidtool/app/logger"
 	"hidtool/app/mice"
 	"hidtool/app/profile"
-	"os"
 	"syscall"
 	"time"
 	"unsafe"
-
-	"github.com/getlantern/systray"
-	"golang.org/x/sys/windows/registry"
 )
 
 var (
@@ -121,63 +117,4 @@ func Run() {
 	}
 	_ = hook
 	_ = kbHook
-}
-
-func RunOnStartup() error {
-	execPath, _ := os.Executable()
-	key, _, err := registry.CreateKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Run`, registry.SET_VALUE)
-	if err != nil {
-		return err
-	}
-	defer key.Close()
-
-	return key.SetStringValue("HIDTool", execPath)
-}
-
-func SetupSysTray(iconData []byte) {
-	systray.SetIcon(iconData)
-	systray.SetTitle("HID Tool")
-	systray.SetTooltip("HID Tool - Mouse and Keyboard Enhancer")
-	menuMap := map[profile.Profile]*systray.MenuItem{}
-	for _, profile := range profile.List {
-		menu := systray.AddMenuItem(profile.GetName(), profile.GetDescription())
-		menuMap[profile] = menu
-	}
-	systray.AddSeparator()
-	mQuit := systray.AddMenuItem("Quit", "Quit the application")
-
-	updateCheckmarks := func() {
-		current := profile.GetCurrentProfile()
-		for pf, mItem := range menuMap {
-			if current != nil && pf.GetID() == current.GetID() {
-				mItem.Check()
-			} else {
-				mItem.Uncheck()
-			}
-		}
-	}
-
-	updateCheckmarks()
-
-	go func() {
-		for range mQuit.ClickedCh {
-			systray.Quit()
-			return
-		}
-	}()
-
-	for pf, mItem := range menuMap {
-		go func(p profile.Profile, item *systray.MenuItem) {
-			for range item.ClickedCh {
-				current := profile.GetCurrentProfile()
-				if (current == nil) || (current.GetID() != p.GetID()) {
-					profile.SetCurrentProfile(p)
-				} else {
-					profile.SetCurrentProfile(nil)
-				}
-				updateCheckmarks()
-			}
-		}(pf, mItem)
-	}
-
 }
