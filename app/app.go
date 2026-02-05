@@ -31,11 +31,13 @@ func Run() {
 			currentProfile := profile.GetCurrentProfile()
 			if currentProfile != nil {
 				key, eventType, ok, isInjected := mice.Check(nCode, wParam, lParam)
-				if ok && eventType == mice.CLICK_DOWN && !isInjected {
-					logger.Debug("🐭 Mouse Event:", key)
+				if ok && !isInjected {
+					logger.Debug("🐭 Mouse:", key, "Event", eventType)
 					binding := currentProfile.GetBinding(0, key)
 					if binding != nil {
-						binding.Action()
+						if eventType == mice.CLICK_DOWN {
+							binding.Action()
+						}
 						if binding.DisableLatestInput() {
 							return 1
 						}
@@ -54,16 +56,16 @@ func Run() {
 			currentProfile := profile.GetCurrentProfile()
 			if currentProfile != nil {
 				key, eventType, isFirst, isExtended, _, ok := keyboard.Check(nCode, wParam, lParam)
-				if ok && eventType == keyboard.TAP_DOWN {
+				if ok {
 					if isExtended {
-						logger.Debug("⌨️ Extended Keyboard Event:", key)
+						logger.Debug("⌨️ Extended Keyboard:", key, "Event", eventType)
 					} else {
-						logger.Debug("⌨️ Keyboard Event:", key)
+						logger.Debug("⌨️ Keyboard:", key, "Event", eventType)
 					}
 
 					binding := currentProfile.GetBinding(key, "")
 					if binding != nil {
-						if isFirst {
+						if isFirst && eventType == keyboard.TAP_DOWN {
 							binding.Action()
 						}
 						if binding.DisableLatestInput() {
