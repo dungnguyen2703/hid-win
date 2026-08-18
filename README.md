@@ -10,6 +10,42 @@ A lightweight utility to remap Keyboard and Mouse inputs on Windows. This tool a
     - Place the `hid.exe` file in that folder.
     - Place your profile configuration files (`profile*.json`) in the **same folder** as the `.exe`.
 3.  **Run**: Double-click `hid.exe` to start the application. It runs quietly in the system tray.
+4.  **Auto-start (optional)**: On its first run the app registers itself to start with Windows. You can turn that off at any time from the tray menu — see [System Tray Menu](#system-tray-menu).
+
+## System Tray Menu
+
+Once running, HID Tool lives in the Windows notification area (system tray). Click the icon to open its menu:
+
+| Item             | Description                                                                                                                                                                             |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Profile list** | One entry per loaded `profile*.json`. A checkmark marks the active profile. Click an unchecked profile to activate it, or click the checked one to deactivate it (all input then passes through untouched). |
+| **Start with Windows** | Checkbox controlling whether HID Tool launches automatically when you sign in. Enabled by default; click to toggle.                                                                |
+| **Quit**         | Stops the application and removes the tray icon.                                                                                                                                          |
+
+### Start with Windows
+
+While enabled, the app registers its own location in the registry Run key:
+`HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run` → value `HIDTool`.
+
+Unchecking the item removes that value, and your choice is saved to `settings.json` so the app does **not** silently re-enable itself on the next launch. The registry value holds the current path of `hid.exe`, and it is refreshed on every launch while the option is enabled — so moving the folder elsewhere keeps auto-start working.
+
+> Note: turning the entry off from Task Manager → **Startup apps** is a separate mechanism. Windows keeps the registry value and blocks it instead, so the tray menu will still show **Start with Windows** as checked.
+
+## Settings
+
+Next to the profile files, the app keeps a `settings.json` in its own folder. It is created the first time you change a setting from the tray menu, and can also be edited by hand (restart the app to reload it).
+
+```json
+{
+  "run_on_startup": false
+}
+```
+
+| Key              | Type    | Default | Description                                                                                                    |
+| ---------------- | ------- | ------- | -------------------------------------------------------------------------------------------------------------- |
+| `run_on_startup` | boolean | `true`  | Whether the app registers itself to start with Windows. Mirrors the **Start with Windows** menu item.            |
+
+Deleting `settings.json` restores the defaults.
 
 ## Configuration
 

@@ -5,14 +5,13 @@ import (
 	"hidtool/app"
 	"hidtool/app/logger"
 	"hidtool/app/profile"
-	"hidtool/app/util"
-	"os"
+	"hidtool/app/settings"
+	"hidtool/app/startup"
 	"syscall"
 	"time"
 	"unsafe"
 
 	"github.com/getlantern/systray"
-	"golang.org/x/sys/windows/registry"
 )
 
 //go:embed icon.ico
@@ -26,17 +25,6 @@ var (
 	globalHEvent    uintptr
 )
 
-func runOnStartup() error {
-	execPath, _ := os.Executable()
-	key, _, err := registry.CreateKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Run`, registry.SET_VALUE)
-	if err != nil {
-		return err
-	}
-	defer key.Close()
-
-	return key.SetStringValue("HIDTool", execPath)
-}
-
 func setupSysTray() {
 	systray.SetIcon(iconData)
 	systray.SetTitle("HID Tool")
@@ -46,6 +34,8 @@ func setupSysTray() {
 		menu := systray.AddMenuItem(profile.GetName(), profile.GetDescription())
 		menuMap[profile] = menu
 	}
+	systray.AddSeparator()
+	mStartup := systray.AddMenuItemCheckbox("Start with Windows", "Launch the application when you sign in to Windows", settings.RunOnStartup())
 	systray.AddSeparator()
 	mQuit := systray.AddMenuItem("Quit", "Quit the application")
 
@@ -66,6 +56,25 @@ func setupSysTray() {
 		for range mQuit.ClickedCh {
 			systray.Quit()
 			return
+		}
+	}()
+
+	go func() {
+		for range mStartup.ClickedCh {
+			enabled := !mStartup.Checked()
+			if err := startup.Apply(enabled); err != nil {
+				logger.Error("Failed to update startup registration:", err)
+				continue
+			}
+			if err := settings.SetRunOnStartup(enabled); err != nil {
+				logger.Error("Failed to save settings:", err)
+			}
+			if enabled {
+				mStartup.Check()
+			} else {
+				mStartup.Uncheck()
+			}
+			logger.Info("Run on startup:", enabled)
 		}
 	}()
 
@@ -113,8 +122,8 @@ func check() {
 func main() {
 	check()
 	go app.Run()
-	if !util.IsDebug() {
-		runOnStartup()
+	if err := startup.Apply(settings.RunOnStartup()); err != nil {
+		logger.Error("Failed to sync startup registration:", err)
 	}
 	systray.Run(onReady, onExit)
 }

@@ -41,5 +41,6 @@ Thumbs.db
 
 # Local config file
 *.dat
+settings.json
 
 !/build/hid.exe
